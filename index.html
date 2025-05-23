@@ -1,115 +1,84 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Overlay VDO Ninja - Draftlol</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overlay DraftLOL + VDO</title>
   <style>
-    body {
+    body, html {
       margin: 0;
-      background: black;
+      padding: 0;
+      background-color: black;
+      overflow: hidden;
       font-family: sans-serif;
     }
     .cam-container {
       position: absolute;
-      width: 480px;
-      height: 270px;
-      border: 3px solid #fff;
-      box-shadow: 0 0 10px #000;
+      width: 384px;
+      height: 216px;
+      border: 4px solid #fff;
+      border-radius: 8px;
       overflow: hidden;
     }
     .name {
       position: absolute;
-      bottom: -25px;
-      left: 10px;
+      bottom: -22px;
+      left: 5px;
       color: white;
-      font-weight: bold;
       font-size: 14px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px black;
     }
     #team-name {
       position: absolute;
       top: 30px;
       left: 50%;
       transform: translateX(-50%);
-      color: white;
-      font-size: 36px;
+      font-size: 48px;
       font-weight: bold;
-      text-shadow: 2px 2px 5px black;
+      color: white;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.8);
     }
   </style>
 </head>
 <body>
-  <div id="team-name">Loading...</div>
-
-  <!-- 5 cam containers -->
-  <div class="cam-container" id="cam0" style="top: 120px; left: 50px;"></div>
-  <div class="cam-container" id="cam1" style="top: 120px; left: 550px;"></div>
-  <div class="cam-container" id="cam2" style="top: 420px; left: 50px;"></div>
-  <div class="cam-container" id="cam3" style="top: 420px; left: 550px;"></div>
-  <div class="cam-container" id="cam4" style="top: 720px; left: 300px;"></div>
+  <div id="team-name">Blue</div>
+  <div class="cam-container" id="cam1" style="top: 100px; left: 100px;"></div>
+  <div class="cam-container" id="cam2" style="top: 100px; left: 500px;"></div>
+  <div class="cam-container" id="cam3" style="top: 100px; left: 900px;"></div>
+  <div class="cam-container" id="cam4" style="top: 350px; left: 250px;"></div>
+  <div class="cam-container" id="cam5" style="top: 350px; left: 750px;"></div>
 
   <script>
-    const playerData = {
-      blue: {
-        teamName: "Blue",
-        players: [
-          { id: "joueur1", name: "Joueur 1" },
-          { id: "joueur2", name: "Joueur 2" },
-          { id: "joueur3", name: "Joueur 3" },
-          { id: "joueur4", name: "Joueur 4" },
-          { id: "joueur5", name: "Joueur 5" },
-        ],
-      },
-      red: {
-        teamName: "Rouge",
-        players: [
-          { id: "joueur6", name: "Joueur 6" },
-          { id: "joueur7", name: "Joueur 7" },
-          { id: "joueur8", name: "Joueur 8" },
-          { id: "joueur9", name: "Joueur 9" },
-          { id: "joueur10", name: "Joueur 10" },
-        ],
-      },
-    };
+    const bluePlayers = ["JB1", "JB2", "JB3", "JB4", "JB5"];
+    const redPlayers = ["JR1", "JR", "JR3", "JR4", "JR5"];
 
-    async function fetchCurrentTeam() {
-      try {
-        const response = await fetch("https://draftlol.dawe.gg/nJ3KmWPR");
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
+    function updateDisplay(team) {
+      const players = team === 'Blue' ? bluePlayers : redPlayers;
+      document.getElementById("team-name").textContent = team;
 
-        const activePick = doc.querySelector(".active-pick, .active-ban");
-        if (activePick && activePick.closest(".team-blue")) {
-          return "blue";
-        } else if (activePick && activePick.closest(".team-red")) {
-          return "red";
-        }
-      } catch (e) {
-        console.error("Fetch error:", e);
-      }
-      return null;
-    }
-
-    function updateCams(teamKey) {
-      const team = playerData[teamKey];
-      document.getElementById("team-name").textContent = team.teamName;
-      team.players.forEach((player, i) => {
-        const container = document.getElementById(`cam${i}`);
-        container.innerHTML = `
-          <iframe src="https://vdo.ninja/?view=${player.id}&cleanoutput&transparent" width="100%" height="100%" allow="camera; microphone"></iframe>
-          <div class="name">${player.name}</div>
+      for (let i = 0; i < 5; i++) {
+        const camContainer = document.getElementById(`cam${i+1}`);
+        camContainer.innerHTML = `
+          <iframe src="https://vdo.ninja/?view=${players[i]}&cleanoutput&transparent" width="100%" height="100%" frameborder="0"></iframe>
+          <div class="name">${players[i]}</div>
         `;
-      });
+      }
     }
 
-    async function updateLoop() {
-      const teamKey = await fetchCurrentTeam();
-      if (teamKey) updateCams(teamKey);
-      setTimeout(updateLoop, 3000);
+    async function fetchDraftState() {
+      try {
+        const res = await fetch("https://draftlol.dawe.gg/api/draft/nJ3KmWPR");
+        const data = await res.json();
+        const activeTeam = data.turn.team === 100 ? "Blue" : "Red";
+        updateDisplay(activeTeam);
+      } catch (err) {
+        console.error("Erreur de récupération du draft :", err);
+      }
     }
 
-    updateLoop();
+    fetchDraftState();
+    setInterval(fetchDraftState, 5000); // Vérifie toutes les 5 secondes
   </script>
 </body>
 </html>
